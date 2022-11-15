@@ -1,0 +1,4 @@
+Host gcloud
+  HostName # FILL IN FROM GOOGLE CLOUD. dynamic IP
+  User User
+  IdentityFile .\.ssh\google_compute_engine
