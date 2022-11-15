@@ -1,0 +1,471 @@
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.24.0 by Michael Rose
+  Copyright 2013-2020 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Automated VM deployment using Ansible and LXD - Emil Harvey</title>
+<meta name="description" content="Summary    I used Ansible to configure some spare PCs   These PCs run VMs and containers using LXD   All devices (bare-metal and virtualized) use TailScale to provide me with a flat (and secure) network   For web-accessible resources, I use Cloudflare Tunnels to expose self-hosted applications   All the above occur with zero configuration on my home router. No port forwarding, Dynamic DNS updates, or reserved DHCP MAC records">
+
+
+  <meta name="author" content="Emil Harvey">
+  
+  <meta property="article:author" content="Emil Harvey">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Emil Harvey">
+<meta property="og:title" content="Automated VM deployment using Ansible and LXD">
+<meta property="og:url" content="emilharvey.ca/ansible/2022/11/14/automated-vm-deployment.html">
+
+
+  <meta property="og:description" content="Summary    I used Ansible to configure some spare PCs   These PCs run VMs and containers using LXD   All devices (bare-metal and virtualized) use TailScale to provide me with a flat (and secure) network   For web-accessible resources, I use Cloudflare Tunnels to expose self-hosted applications   All the above occur with zero configuration on my home router. No port forwarding, Dynamic DNS updates, or reserved DHCP MAC records">
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2022-11-14T00:00:00+00:00">
+
+
+
+
+
+
+<link rel="canonical" href="emilharvey.ca/ansible/2022/11/14/automated-vm-deployment.html">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": null,
+      "url": "emilharvey.ca/"
+    
+  }
+</script>
+
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Emil Harvey Feed">
+
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css"></noscript>
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+        <a class="site-title" href="/">
+          Emil Harvey
+          
+        </a>
+        <ul class="visible-links"></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="https://github.com/ehharvey.png" alt="Emil Harvey" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Emil Harvey</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>CS student: Interested in DevOps and Site Reliability!</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+        <li itemprop="homeLocation" itemscope itemtype="https://schema.org/Place">
+          <i class="fas fa-fw fa-map-marker-alt" aria-hidden="true"></i> <span itemprop="name">Waterloo, Ontario, Canada</span>
+        </li>
+      
+
+      
+        
+          
+            <li><a href="https://github.com/ehharvey" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+      
+
+      
+
+      
+        <li>
+          <a href="mailto:emil.h.harvey@gmail.com">
+            <meta itemprop="email" content="emil.h.harvey@gmail.com" />
+            <i class="fas fa-fw fa-envelope-square" aria-hidden="true"></i><span class="label">Email</span>
+          </a>
+        </li>
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Automated VM deployment using Ansible and LXD">
+    <meta itemprop="description" content="Summary  I used Ansible to configure some spare PCs  These PCs run VMs and containers using LXD  All devices (bare-metal and virtualized) use TailScale to provide me with a flat (and secure) network  For web-accessible resources, I use Cloudflare Tunnels to expose self-hosted applications  All the above occur with zero configuration on my home router. No port forwarding, Dynamic DNS updates, or reserved DHCP MAC records">
+    <meta itemprop="datePublished" content="2022-11-14T00:00:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Automated VM deployment using Ansible and LXD
+</h1>
+          
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+        <h1 id="summary">Summary</h1>
+<ol>
+  <li>I used Ansible to configure some spare PCs</li>
+  <li>These PCs run VMs and containers using LXD</li>
+  <li>All devices (bare-metal and virtualized) use TailScale to provide me with a flat (and secure) network</li>
+  <li>For web-accessible resources, I use Cloudflare Tunnels to expose self-hosted applications</li>
+  <li>All the above occur with zero configuration on my home router. No port forwarding, Dynamic DNS updates, or reserved DHCP MAC records</li>
+</ol>
+
+<p>This blog post is a brief write-up on my experiences using Ansible to provision machines. I only go into a bit of detail about how I achieved this; however, I share the repository I created while working on this project. I’d also like to make an informal video where I peek through the code and explain Ansible’s workings more specifically. Stay tuned!</p>
+
+<p>Getting back on track, I use this blog post to describe some general background information, my approach to managing my personal infrastructure, and some general lessons that I think that others can also learn from.</p>
+
+<h1 id="background">Background</h1>
+<p>When I worked in my College’s IT department, my employer let me take home some PCs that were thrown out. I recently learned Ansible at my last co-op at Descartes Systems Group. I configured these PCs with Ansible, and this write-up explains my experience doing so, including some lessons that apply to infrastructure management and some more general lessons.</p>
+
+<p>I have posted my Ansible playbooks and roles that I developed: See <a href="https://github.com/ehharvey/ansible">here</a>. My code is readable but needs improvement. I want to migrate my local roles to be in Ansible collections. I also plan to use Terraform instead of implementing my own VM creation role. I share my code now since it is usable, but I plan to improve it.</p>
+
+<p>I had a few main goals when starting this project:</p>
+<ol>
+  <li>I wanted a set of VM hosts</li>
+  <li>I wanted to access my VM hosts from anywhere using the Internet</li>
+  <li>I wanted each VM to be identical but not clustered. Each VM host will contain a unique set of VMs (the VMs themselves could cluster if needed)</li>
+  <li>I wanted to automate as much as feasible</li>
+  <li>I have a domain (emilharvey.ca) where I want to expose select services on</li>
+</ol>
+
+<h1 id="approach">Approach</h1>
+<p>I have several old PCs. These machines ran Haswell processors. Each machine had 4-16 GB of RAM and 100-500 GB of solid-state storage. I then decided what I wanted to use these machines for.</p>
+
+<p>I wanted to run Linux on each machine and use the machines as independent VM hosts. I settled upon Ubuntu Server with LXD. Ubuntu Server is popular enough, which makes finding support easy. LXD is software that runs containers and virtual machines.</p>
+
+<p>All you need are virtualization hosts. You can launch whichever service you need inside a virtual machine. LXD also supports containers too. Many virtualization software, including LXD, supports clustering, but I did not find clustering to be necessary.</p>
+
+<p>Networking is an important consideration. I decided to avoid complications and use Tailscale. Tailscale is a VPN. It exposes hosts and only the hosts that Tailscale is installed on. Each host receives a static IP that other Tailscale hosts can reach. Tailscale lets me have my virtual machine hosts and their virtual machines to be on the same flat virtual network. Beyond that, Tailscale acts as a firewall by letting me configure ACLs (Access Control Lists) via their web app and REST API.</p>
+
+<figure class="highlight"><pre><code class="language-json" data-lang="json"><span class="p">{</span><span class="w">
+  </span><span class="err">//</span><span class="w"> </span><span class="err">Access</span><span class="w"> </span><span class="err">control</span><span class="w"> </span><span class="err">lists.</span><span class="w">
+  </span><span class="nl">"acls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="err">//</span><span class="w"> </span><span class="err">Match</span><span class="w"> </span><span class="err">absolutely</span><span class="w"> </span><span class="err">everything.</span><span class="w">
+    </span><span class="err">//</span><span class="w"> </span><span class="err">Comment</span><span class="w"> </span><span class="err">this</span><span class="w"> </span><span class="err">section</span><span class="w"> </span><span class="err">out</span><span class="w"> </span><span class="err">if</span><span class="w"> </span><span class="err">you</span><span class="w"> </span><span class="err">want</span><span class="w"> </span><span class="err">to</span><span class="w"> </span><span class="err">define</span><span class="w"> </span><span class="err">specific</span><span class="w"> </span><span class="err">restrictions.</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"accept"</span><span class="p">,</span><span class="w"> </span><span class="nl">"src"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"tag:admin"</span><span class="p">],</span><span class="w"> </span><span class="nl">"dst"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"*:*"</span><span class="p">]},</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"accept"</span><span class="p">,</span><span class="w"> </span><span class="nl">"src"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"tag:sqiii"</span><span class="p">],</span><span class="w"> </span><span class="nl">"dst"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"tag:sqiii:*"</span><span class="p">]},</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"tagOwners"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"tag:admin"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"xxx@gmail.com"</span><span class="p">],</span><span class="w">
+    </span><span class="nl">"tag:sqiii"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"xxx@gmail.com"</span><span class="p">],</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+</span><span class="p">}</span></code></pre></figure>
+
+<p><em>Tailscale’s ACL: simple JSON that describes which machines can connect to each other</em></p>
+
+<p>A related concern is allowing public access to services. For example, I host a SonarQube instance used by an assignment. I provided public access via this URL: https://sqiii-sonarqube.emilharvey.ca. I did so using Cloudflare Tunnels. Tunnels is an application that Cloudflare provides to let you expose services to the internet via a tunnel. I simply run the application with the appropriate configuration and update my Cloudflare DNS to point to a specially-defined URL. I can even protect access to the service via Cloudflare Access. I can use services like GitHub as identity providers. I can whitelist users by their emails, which gets proven by GitHub. The Cloudflare platform handles the rest. It shows a login screen, I authenticate via my GitHub account, and Cloudflare presents me with my self-hosted service.</p>
+
+<p>Both Tailscale and Cloudflare’s services operate with zero additional network configuration. I don’t use port forwarding. I also have a dynamic Internet IP. Neither factors are a problem. I can access all of my machines via Tailscale, and the internet can access my web services via Cloudflare.</p>
+
+<p>I provisioned these machines using Ansible. Ansible is a configuration management framework. It operates as a Python application that connects to other machines (usually over SSH). Ansible then runs commands and copies Python code for the remote host to execute.</p>
+
+<p>One final consideration is secret management. Tailscale and Cloudflare provide API keys which I must keep secret. For simplicity, I used <code class="language-plaintext highlighter-rouge">passwordstore</code>. It lets me encrypt secrets via <code class="language-plaintext highlighter-rouge">GPG</code> (convenient since I have  Yubikey). Ansible provides a builtin look-up plugin that lets met retrieve these secrets as playbooks run.</p>
+
+<figure class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="na">tailscale_authkey</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">lookup('ansible.builtin.passwordstore',</span><span class="nv"> </span><span class="s">'tailscale/authkey'</span><span class="nv"> </span><span class="s">)</span><span class="nv"> </span><span class="s">}}"</span>
+<span class="na">lxd_trust_password</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">lookup('ansible.builtin.passwordstore',</span><span class="nv"> </span><span class="s">'lxd/trust_password'</span><span class="nv"> </span><span class="s">}}"</span></code></pre></figure>
+
+<p><em>Some secrets passed to be Ansible variables. Look, no secrets!</em></p>
+
+<h1 id="installing-ubuntu-server">Installing Ubuntu Server</h1>
+<p>I manually installed Ubuntu Server on each machine. There are methods to automate this process, like using, but I avoided these after spending some time using Canonical’s MAAS. The approach taken by MAAS prefers it to act as a DHCP server, among other things. It is not that MAAS wouldn’t work, it just was developed with a different user than me. I found it to require , and I worry about what vulnerabilities would arise from using a required provisioning stack for MAAS, like Intel AMT and PXE. Since the virtualization hosts only run virtual machines, I didn’t think I would be reinstalling often.</p>
+
+<p>During installation, I assigned static IPs to each machine. My home router/WAP device also provides DHCP, but I set static IPs so that I can easily access them later. On my home router, I set the DHCP range to be from <code class="language-plaintext highlighter-rouge">xxx.xxx.xxx.51</code> to <code class="language-plaintext highlighter-rouge">xxx.xxx.xxx.199</code> (my subnet size is <code class="language-plaintext highlighter-rouge">24</code>). My router occupied <code class="language-plaintext highlighter-rouge">.1</code>. This left me with assigning new servers from <code class="language-plaintext highlighter-rouge">xxx.xxx.xxx.2</code> to <code class="language-plaintext highlighter-rouge">xxx.xxx.xxx.50</code> and <code class="language-plaintext highlighter-rouge">xxx.xxx.xxx.200</code> to <code class="language-plaintext highlighter-rouge">xxx.xxx.xxx.254</code>. After these servers get provisioned, I’ll set them to have DHCP-provided IPs. Since I use Tailscale, I can access them through their Tailscale DNS name or Tailscale IP.</p>
+
+<p>I later found that my virtualization hosts retained their static IP. Even as these devices rebooted, the router handed them their old static IPs even though they were outside the normal DHCP range. You should also be able to renew your DHCP leases to force the virtualization hosts to receive proper DHCP IPs. However, I still need to do so.</p>
+
+<p>When installing Ubuntu Server, I enabled the SSH server and instructed my machine to retrieve my SSH public keys from GitHub. I created an SSH key there a while ago, and GitHub is perfectly usable as a personal key server. We can use Ansible if we need to rotate the keys.</p>
+
+<h1 id="provisioning-using-ansible">Provisioning Using Ansible</h1>
+<p>Now that each of my servers runs Ubuntu Server, I can further provision them using Ansible. Ansible has several concepts that work together to configure a system. We can install packages, configure services, and even run arbitrary commands. You can think of it as a framework. I defer a proper introduction to its source: see https://docs.ansible.com/ansible/latest/user_guide/intro.html.</p>
+
+<p>I first used Ansible to install Tailscale. Tailscale provides a convenient install script. I wrote tasks for Ansible to install and run it. Tailscale can be authenticated with an authentication key which you can retrieve from Tailscale’s web UI. After installing Tailscale, further Ansible tasks instructed Ansible to use Tailscale’s IPs moving forward. Afterwards, I configure each virtualization host to use a DHCP-provided IP. Since I have the Tailscale IP, I do not care what the physical IPs become.</p>
+
+<figure class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="nn">---</span>
+<span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Configure tailscale</span>
+  <span class="na">hosts</span><span class="pi">:</span> <span class="s">unprovisioned_baremetals</span>
+  <span class="na">roles</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s">tailscale</span>
+  <span class="na">vars</span><span class="pi">:</span>
+    <span class="na">static_ips</span><span class="pi">:</span>
+      <span class="na">baremetal0</span><span class="pi">:</span> <span class="c1"># Static IP here</span>
+      <span class="na">baremetal1</span><span class="pi">:</span> <span class="c1"># Static IP here</span>
+    <span class="na">ansible_host</span><span class="pi">:</span> <span class="s2">"</span><span class="s">"</span></code></pre></figure>
+
+<p><em>I use an Ansible role to install Tailscale on all my virtualization hosts (I call them baremetals). Since my devices have static IPs initially, I let Ansible know which IP to use through the static_ips dictionary</em></p>
+
+<p>Next, I set the hostname, installed a firewall (UFW), and set the timezone, all using Ansible. 
+One server had 4 disks attached as well as a main OS disk. I installed ZFS on this and created a RAID array using these 4 devices. I next Ansible to install LXD. That’s it: now I have one or more virtualization hosts! Right now, I have 2, but I can rerun the Ansible tasks on new machines as necessary.</p>
+
+<p>With Tailscale, networking becomes simple. Physical ethernet interfaces can have a simple <code class="language-plaintext highlighter-rouge">deny all incoming</code> rule. Tailscale creates a new, virtual interface called <code class="language-plaintext highlighter-rouge">tailscale0</code>. I set the firewall to permit incoming <code class="language-plaintext highlighter-rouge">SSH</code> (port 22) only. I needed no other configuration: even if I want to host a website, I can use Cloudflare Tunnels to expose the website via a tunnel.</p>
+
+<h2 id="creating-a-virtual-machine">Creating a Virtual Machine</h2>
+<p>Now I am ready to launch virtual machines. I use Ansible to create virtual machines. LXD defaults to providing bridged networking to each guest. Each guest can receive the Internet via NAT. For those unfamiliar, this is similar to how most home networks work. You have a private network; a typical network being a <code class="language-plaintext highlighter-rouge">192.168.x.0/24</code>. Your router provides NAT to give each private network device the internet.</p>
+
+<figure class="highlight"><pre><code class="language-yaml" data-lang="yaml"><span class="nn">---</span>
+<span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Create MySQL VM</span>
+  <span class="na">hosts</span><span class="pi">:</span> <span class="s">baremetal1</span>
+  <span class="na">tasks</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Create MySQL VM</span>
+    <span class="s">ansible.builtin.include_role</span><span class="pi">:</span> 
+      <span class="na">name</span><span class="pi">:</span> <span class="s">lxdvm</span>
+    <span class="na">vars</span><span class="pi">:</span>
+      <span class="na">lxd</span><span class="pi">:</span>
+        <span class="na">name</span><span class="pi">:</span> <span class="s">sqiii-mysql</span>
+        <span class="na">config</span><span class="pi">:</span>
+          <span class="s">limits.memory</span><span class="pi">:</span> <span class="s">1GB</span>
+        <span class="na">group</span><span class="pi">:</span> <span class="s2">"</span><span class="s">sqiii"</span></code></pre></figure>
+
+<p><em>Ansible Playbook to create a virtual machine for a SonarQube Instance</em></p>
+
+<p>When we remember networking basics, we see that this approach allows each home network device (and LXD virtual guest) “one-way” access to the internet. You can initiate connections to Google directly, but Google cannot do the same to you. Tailscale and Cloudflare Tunnels mitigate this by making hosts continually initiate connections (to Cloudflare or to each other).</p>
+
+<p>I use Ansible to create new virtual machines. LXD lets me run arbitrary commands on virtualization guests, letting me install Tailscale immediately after the virtualization guest is created. I can then provision the virtualization guest just like my virtualization host, using the same Ansible tasks to set the firewall, etc.</p>
+
+<p>The way I used Ansible somewhat overlaps with another system called Terraform. Terraform specializes on virtual machine</p>
+
+<p>I can use Ansible to launch a new virtualization that I install SonarQube to. I can access it via Tailscale, but others can not. To make SonarQube publicly accessible, I then turned to Cloudflare Access and Tunnels. I created a tunnel which proxied my self-hosted instance to Cloudflare. I then created access controls to only let me access it. SonarQube initially starts with weak default credentials. I completed the setup (and updated the credentials). Afterwards, I manually deleted the Cloudflare Access rules. Now, SonarQube is accessible all.</p>
+
+<h1 id="lessons-learned-and-next-steps">Lessons Learned and Next Steps</h1>
+<p>Here, I describe some general lessons that I learned. In brief, my experience here reminded me to not try to reimplement past work. I also see the value of being able to fail fast and repeat attempts quickly.</p>
+
+<p>The main lesson I learned here was to try applying what exists instead of trying to reinvent your own implementation. I struggled with networking for a while before discovering Tailscale. The same applies to Cloudflare. I am exploring Terraform now since I feel that my approach to VM management is not easily scalable. I am also hoping to explore other VM-related improvements, such as creating pre-configured images.</p>
+
+<p>A general software engineering lesson that applies here is that you want easy testability. In general software development, you do so with {unit, integration, system, etc.} testing. In system administration, you can do so via personal virtual machines (on your laptop, etc.) as you start out. Aiming to have your physical hosts simply be virtual machine hosts is also great since you can easily recreate virtual machines. The ease that Tailscale and Cloudflare provide means minimal interdependent configurations to manage, such as firewalls and routing tables, etc.</p>
+
+<p>Finally, as I mentioned earlier, my Ansible code lives in a haphazard state on a single repository. In my project class, I’ve successfully implemented automated tests and other CI/CD components in my <a href="https://github.com/CSCN73030-projectv-group9/Attendance">current project class</a>. I’ve yet to apply the same organization approach with my Ansible work, but after seeing Ansible’s Collection, I see the benefit to doing so.</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time datetime="2022-11-14T00:00:00+00:00">November 14, 2022</time></p>
+
+
+      </footer>
+
+      
+
+      
+    </div>
+
+    
+  </article>
+
+  
+  
+</div>
+
+    </div>
+
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2022 Emil Harvey. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>
