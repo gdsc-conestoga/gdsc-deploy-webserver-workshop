@@ -7,10 +7,12 @@
     state: stopped   #  <--- FILL IN 'started' or 'stopped'    #
   ##############################################################
   tasks:
-    - name: Install/uninstall apache2
+    - name: Install/uninstall packages
       ansible.builtin.package:
-        name: apache2
-        state: "{{ absent_or_present }}"
+        name: 
+          - apache2
+          - rsync # needed for later ansible task
+        state: "{{ absent_or_present[state] }}"
       become: true
       vars:
         absent_or_present:
@@ -28,6 +30,11 @@
           started: true
           stopped: false
     
+    - name: Ensure default site is disabled
+      ansible.builtin.shell: a2dissite 000-default.conf
+      become: true
+      when: state == 'started'
+    
     - name: Ensure /var/www/html is empty
       ansible.builtin.file:
         name: "/var/www/html"
@@ -43,8 +50,6 @@
       ansible.builtin.synchronize:
         src: "my_website/"
         dest: "/var/www/html/"
-        owner: root
-        group: root
         recursive: true
       become: true
-      when: state == 'present'
+      when: state == 'started'

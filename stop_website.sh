@@ -1,6 +1,5 @@
 #! /bin/bash
 
-
 echo "Stopping and disabling apache2"
 sudo systemctl stop apache2
 sudo systemctl disable apache2
