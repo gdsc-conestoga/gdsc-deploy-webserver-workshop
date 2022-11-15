@@ -1,0 +1,50 @@
+---
+- name: "Sets the website to {{ state }}"
+  hosts: localhost
+  connection: local
+  vars:
+  ##############################################################
+    state: stopped   #  <--- FILL IN 'started' or 'stopped'    #
+  ##############################################################
+  tasks:
+    - name: Install/uninstall apache2
+      ansible.builtin.package:
+        name: apache2
+        state: "{{ absent_or_present }}"
+      become: true
+      vars:
+        absent_or_present:
+          stopped: absent
+          started: present
+
+    - name: 
+      ansible.builtin.systemd:
+        name: apache2
+        state: "{{ state }}"
+        enabled: "{{ enabled_mapping[state] }}"
+      become: true
+      vars:
+        enabled_mapping:
+          started: true
+          stopped: false
+    
+    - name: Ensure /var/www/html is empty
+      ansible.builtin.file:
+        name: "/var/www/html"
+        state: "{{ item }}"
+        owner: root
+        group: root
+      loop:
+        - absent
+        - directory
+      become: true
+    
+    - name: Ensure /var/www/html contains website
+      ansible.builtin.synchronize:
+        src: "my_website/"
+        dest: "/var/www/html/"
+        owner: root
+        group: root
+        recursive: true
+      become: true
+      when: state == 'present'
